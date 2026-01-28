@@ -2,25 +2,23 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    fullname: {
+    name: {
       type: String,
       required: true,
     },
     email: {
       type: String,
       required: true,
-      unique: true,
     },
     password: {
       type: String,
       required: true,
       minlength: [8, "Password must have a least 8 character"],
-      maxlength: [32, "Password must not have more than 32 character"],
+      // maxlength: [32, "Password must not have more than 32 character"],
     },
     phone: {
       type: String,
       required: true,
-      maxlength: [10, "Phone number must be of 10 characters"],
     },
     accountVerified: {
       type: Boolean,
