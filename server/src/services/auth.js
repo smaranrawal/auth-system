@@ -48,18 +48,6 @@ const createUser = async (userData) => {
     password: await encryptPassword(userData.password),
   });
   return user;
-  // try {
-  //   const user = await User.create({
-  //     ...userData,
-  //     password: await encryptPassword(userData.password),
-  //   });
-  //   return user;
-  // } catch (error) {
-  //   if (error.code === 11000) {
-  //     throw new ErrorHandler("Email already exists", 400);
-  //   }
-  //   throw error;
-  // }
 };
 
 const generateVerificationCode = () => {
@@ -114,6 +102,26 @@ const generateEmailTemplate = (verificationCode) => {
   </div>
   `;
 };
+
+const allUserEntries = async (email, phone) => {
+  const user = User.find({
+    $or: [
+      { email, accountVerified: false },
+      { phone, accountVerified: false },
+    ],
+  }).sort({ createdAt: -1 });
+  return user;
+};
+
+const deleteDeuplicateUsers = async (user, email, phone) => {
+  await User.deleteMany({
+    _id: { $ne: user._id },
+    $or: [
+      { email, accountVerified: false },
+      { phone, accountVerified: false },
+    ],
+  });
+};
 export {
   validatePhoneNumber,
   createUser,
@@ -122,4 +130,6 @@ export {
   generateVerificationCode,
   sendVerificationCode,
   generateEmailTemplate,
+  allUserEntries,
+  deleteDeuplicateUsers,
 };

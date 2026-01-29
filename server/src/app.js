@@ -2,8 +2,8 @@ import express from "express";
 import { config } from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import { errorMiddleware } from "./src/middleware/error.middleware.js";
-import userRouter from "./src/routers/user.router.js";
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import userRouter from "./routers/user.router.js";
 export const app = express();
 config({ path: "./config.env" });
 
