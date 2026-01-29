@@ -12,6 +12,7 @@ import {
   allUserEntries,
   deleteDeuplicateUsers,
 } from "../services/auth.js";
+import { generateJWTToken, verifyPassoword } from "../utils/auth.js";
 
 const userRegister = asyncHandler(async (req, res, next) => {
   const { name, email, phone, password, verificationMethod } = req.body;
@@ -99,8 +100,7 @@ const verifyOtp = asyncHandler(async (req, res, next) => {
 
   if (userEntries.length > 1) {
     user = userEntries[0];
-    await deleteDeuplicateUsers(user,email,phone);
-   
+    await deleteDeuplicateUsers(user, email, phone);
   } else {
     user = userEntries[0];
   }
@@ -126,4 +126,42 @@ const verifyOtp = asyncHandler(async (req, res, next) => {
   res.status(200).json(new ApiResponse(200, null, "OTP verified sucessfulyy"));
 });
 
-export { userRegister, verifyOtp };
+const loginController = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(new ErrorHandler("Email or password is required", 400));
+  }
+
+  const user = await getUserByEmailOrPhone(email);
+
+  if (!user) {
+    return next(new ErrorHandler("User is not found"), 400);
+  }
+
+  const passwordMatched = await verifyPassoword(password, user.password);
+  if (!passwordMatched) {
+    return next(new ErrorHandler("Invalid Passowrd", 400));
+  }
+
+  const jwtToken = generateJWTToken(user);
+  
+  res.cookie("token", jwtToken, {
+    httpOnly: true,
+    secure: false,
+    maxAge: 24 * 60 * 60 * 1000, //1 day
+    sameSite: "strict",
+  });
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { name: user.name, email: user.email, phone: user.phone },
+        "User logged in ",
+      ),
+    );
+});
+
+export { userRegister, verifyOtp, loginController };
