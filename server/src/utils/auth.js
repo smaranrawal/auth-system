@@ -14,8 +14,7 @@ const verifyPassoword = async (inputPassword, storedHashedPassword) => {
 const generateJWTToken = (user) => {
   const token = jwt.sign(
     {
-      id: user.id,
-      email: user.email,
+      id: user._id,
     },
     process.env.JWT_SECRET,
     {

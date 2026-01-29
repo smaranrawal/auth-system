@@ -145,7 +145,7 @@ const loginController = asyncHandler(async (req, res, next) => {
   }
 
   const jwtToken = generateJWTToken(user);
-  
+
   res.cookie("token", jwtToken, {
     httpOnly: true,
     secure: false,
@@ -164,4 +164,15 @@ const loginController = asyncHandler(async (req, res, next) => {
     );
 });
 
-export { userRegister, verifyOtp, loginController };
+const logoutController = asyncHandler(async (req, res) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    expires: new Date(0), // 👈 immediately expires
+    sameSite: "strict",
+    secure: false, // true in production
+  });
+
+  res.status(200).json(new ApiResponse(200, "User logout sucessfully;"));
+});
+
+export { userRegister, verifyOtp, loginController, logoutController };
