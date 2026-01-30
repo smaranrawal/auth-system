@@ -3,6 +3,7 @@ import { User } from "../models/user.models.js";
 import { encryptPassword, getTwilio } from "../utils/auth.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import crypto from "crypto";
 
 const validatePhoneNumber = (phone) => {
   const phoneRegex = /^(97|98)\d{8}$/;
@@ -122,6 +123,17 @@ const deleteDeuplicateUsers = async (user, email, phone) => {
     ],
   });
 };
+
+const generateResetToken = () => {
+  const resetToken = crypto.randomBytes(20).toString("hex");
+
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  return { resetToken, hashedToken };
+};
 export {
   validatePhoneNumber,
   createUser,
@@ -132,4 +144,5 @@ export {
   generateEmailTemplate,
   allUserEntries,
   deleteDeuplicateUsers,
+  generateResetToken,
 };

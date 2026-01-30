@@ -11,8 +11,15 @@ import {
   sendVerificationCode,
   allUserEntries,
   deleteDeuplicateUsers,
+  generateResetToken,
 } from "../services/auth.js";
-import { generateJWTToken, verifyPassoword } from "../utils/auth.js";
+import {
+  encryptPassword,
+  generateJWTToken,
+  verifyPassoword,
+} from "../utils/auth.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import crypto from "crypto";
 
 const userRegister = asyncHandler(async (req, res, next) => {
   const { name, email, phone, password, verificationMethod } = req.body;
@@ -175,4 +182,103 @@ const logoutController = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, "User logout sucessfully;"));
 });
 
-export { userRegister, verifyOtp, loginController, logoutController };
+const getUser = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  res.status(200).json(new ApiResponse(200, user));
+});
+
+const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return next(new ErrorHandler("Email is required", 400));
+  }
+
+  const user = await User.findOne({ email, accountVerified: true });
+  if (!user) {
+    return next(new ErrorHandler("User not found", 400));
+  }
+
+  const { resetToken, hashedToken } = generateResetToken();
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+  await user.save({ validateBeforeSave: false });
+  console.log("RESET TOKEN", resetToken);
+  console.log(hashedToken);
+
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
+  const message = `Your reset password is: \n\n${resetPasswordUrl}\n\n If you have not requested this email then please ignore it `;
+  try {
+    await sendEmail(
+      user.email,
+      "MERN AUTHENTICATION APP RESET PASSWORD",
+      message,
+    );
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, `Email sent to ${user.email} sucessfully`));
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(
+      new ErrorHandler(
+        error.message ? error.message : "Cannot send reset password token ",
+      ),
+    );
+  }
+});
+
+const resetPassword = asyncHandler(async (req, res, next) => {
+  const { token } = req.params;
+  const { newPassword, confirmPassword } = req.body;
+  if (!newPassword || !confirmPassword) {
+    return next(new ErrorHandler("All fields are required", 400));
+  }
+  if (newPassword !== confirmPassword) {
+    return next(
+      new ErrorHandler("Password and ConfirmPassword  donot match", 400),
+    );
+  }
+
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(token) //takes the token generated using crypto and hashed it and the searches user using that hashed token
+    .digest("hex");
+  console.log("Token", token);
+  console.log("hassehd", resetPasswordToken);
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  console.log(user);
+  if (!user) {
+    return next(
+      new ErrorHandler("Reset password token is invalid or expired", 400),
+    );
+  }
+
+  user.password = await encryptPassword(newPassword);
+
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save();
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, user, "password reset sucessfully"));
+});
+
+export {
+  userRegister,
+  verifyOtp,
+  loginController,
+  logoutController,
+  getUser,
+  forgotPassword,
+  resetPassword,
+};
