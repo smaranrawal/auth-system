@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import userRouter from "./routers/user.router.js";
+import removeUnverifiedUsers from "./automation/removedUnverifiedUsers.js";
 export const app = express();
 config({ path: "./config.env" });
 
@@ -20,5 +21,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/v1/user", userRouter);
+removeUnverifiedUsers();
 
 app.use(errorMiddleware);
